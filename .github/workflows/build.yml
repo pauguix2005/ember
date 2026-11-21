@@ -1,0 +1,57 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux
+          - os: macos-14
+            name: macos
+          - os: windows-2022
+            name: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libjack-jackd2-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxcomposite-dev libxext-dev libgl1-mesa-dev libfontconfig1-dev libfreetype-dev ninja-build
+
+      - name: Configure
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cmake -B build -G "Visual Studio 17 2022" -A x64
+          else
+            cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          fi
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: DSP tests
+        shell: bash
+        run: |
+          exe=$(find build -type f \( -name EmberTests -o -name EmberTests.exe \) | head -n 1)
+          "$exe" test-renders
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: EMBER-${{ matrix.name }}
+          path: |
+            build/Ember_artefacts/Release/VST3
+            build/Ember_artefacts/Release/AU
+            build/Ember_artefacts/Release/Standalone
+          if-no-files-found: warn

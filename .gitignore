@@ -1,0 +1,8 @@
+build*/
+JUCE/
+test-renders/
+dist/
+.DS_Store
+*.user
+.vscode/
+.idea/
