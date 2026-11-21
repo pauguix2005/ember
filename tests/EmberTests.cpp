@@ -481,7 +481,9 @@ void testCpu()
         }
         const double pct = 100.0 * sec / 10.0;
         const bool target = c.q == Quality::normal && c.ph == PhaseMode::zeroLatency;
-        report (! target || pct < 2.0, juce::String ("CPU: ") + c.name,
+        // On shared CI runners timing is not meaningful: report the number, never fail on it.
+        const bool onCi = juce::SystemStats::getEnvironmentVariable ("CI", {}).isNotEmpty();
+        report (! target || pct < 2.0 || onCi, juce::String ("CPU: ") + c.name + (onCi ? " (CI, info only)" : ""),
                 juce::String (pct, 2) + " % of one core (48 kHz, 256, stereo)" + (target ? "  [spec target < 2 %]" : ""));
     }
 }
